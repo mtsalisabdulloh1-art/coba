@@ -29,12 +29,14 @@
             background: white;
             padding: 30px;
             border-radius: 12px;
-            width: 350px;
+            width: 380px;
             max-width: 90%;
             text-align: center;
             box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+            max-height: 90vh;
+            overflow-y: auto;
         }
-        .modal-box h2 { margin-bottom: 5px; color: #333; }
+        .modal-box h2 { margin-bottom: 5px; color: #333; font-size: 18px; }
         .modal-box .subtitle { color: #888; font-size: 12px; margin-bottom: 20px; }
         .modal-box .form-group { margin-bottom: 12px; text-align: left; }
         .modal-box .form-group label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 12px; color: #555; }
@@ -45,11 +47,6 @@
         .modal-box .form-group input:focus { border-color: #007bff; outline: none; }
         .modal-box .btn { width: 100%; margin: 5px 0; }
         .modal-error { color: #dc3545; font-size: 12px; margin-top: 8px; display: none; }
-        .modal-close {
-            position: absolute; top: 10px; right: 15px;
-            font-size: 24px; cursor: pointer; color: #888;
-            background: none; border: none;
-        }
         .modal-info {
             background: #d4edda; border-radius: 6px; padding: 8px;
             margin-top: 10px; font-size: 10px; color: #155724;
@@ -69,53 +66,35 @@
             flex-wrap: wrap;
             gap: 8px;
         }
-        .header-bar .user-info {
-            font-size: 12px;
-            color: #555;
-        }
+        .header-bar .user-info { font-size: 12px; color: #555; }
         .header-bar .user-info strong { color: #007bff; }
         .btn-login-header {
-            padding: 6px 14px;
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: 600;
+            padding: 6px 14px; background: #007bff; color: white;
+            border: none; border-radius: 6px; cursor: pointer;
+            font-size: 12px; font-weight: 600;
         }
         .btn-logout-header {
-            padding: 6px 14px;
-            background: #dc3545;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: 600;
+            padding: 6px 14px; background: #dc3545; color: white;
+            border: none; border-radius: 6px; cursor: pointer;
+            font-size: 12px; font-weight: 600;
         }
         .admin-badge {
-            background: #28a745;
-            color: white;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 10px;
-            margin-left: 5px;
+            background: #28a745; color: white;
+            padding: 3px 8px; border-radius: 4px;
+            font-size: 10px; margin-left: 5px;
         }
         
         /* ========== TAB NAV ========== */
         .tab-nav {
-            display: flex;
-            background: white;
+            display: flex; background: white;
             border-radius: 10px 10px 0 0;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             flex-wrap: wrap;
         }
         .tab-btn {
-            flex: 1; min-width: 70px; padding: 12px 6px; border: none;
+            flex: 1; min-width: 60px; padding: 12px 4px; border: none;
             background: #e9ecef; cursor: pointer; font-weight: 600;
-            font-size: 11px; transition: 0.2s; text-align: center;
+            font-size: 10px; transition: 0.2s; text-align: center;
         }
         .tab-btn.active { background: #007bff; color: white; }
         .tab-btn:hover:not(.active) { background: #dee2e6; }
@@ -226,11 +205,14 @@
         .status-offline { background: #f8d7da; color: #721c24; }
         .status-loading { background: #fff3cd; color: #856404; }
         
-        /* Lock icon for admin tabs */
         .lock-badge {
             font-size: 9px; background: #dc3545; color: white;
             padding: 2px 5px; border-radius: 3px; margin-left: 3px;
         }
+        
+        /* User management table */
+        .user-table { min-width: 400px; }
+        .user-table th { background: #6c757d; }
     </style>
 </head>
 <body>
@@ -254,11 +236,6 @@
             <button class="btn btn-secondary" id="btnCloseModal">❌ Batal</button>
             
             <div class="modal-error" id="loginError">❌ Username atau password salah!</div>
-            
-            <div class="modal-info">
-                <strong>ℹ️ Info Login:</strong><br>
-                👤 Admin: <b>admin</b> / <b>admin123</b>
-            </div>
         </div>
     </div>
     
@@ -287,6 +264,7 @@
             <button class="tab-btn" data-tab="tab-status">📋 Riwayat</button>
             <button class="tab-btn admin-only" data-tab="tab-kembali">🔄 Kembalikan <span class="lock-badge">ADMIN</span></button>
             <button class="tab-btn admin-only" data-tab="tab-edit">✏️ Edit <span class="lock-badge">ADMIN</span></button>
+            <button class="tab-btn admin-only" data-tab="tab-users">👥 Users <span class="lock-badge">ADMIN</span></button>
         </div>
         
         <div class="tab-content">
@@ -456,6 +434,74 @@
                 </div>
                 <div id="emptyEdit" style="text-align:center;padding:30px;color:#888;display:none;">📭 Belum ada barang.</div>
             </div>
+            
+            <!-- ========== TAB MANAJEMEN USER (ADMIN) ========== -->
+            <div class="tab-panel" id="tab-users">
+                <h3>👥 Manajemen User <span class="admin-badge">🔑 ADMIN</span></h3>
+                
+                <div class="info-aktif" style="background:#fff3cd;border-color:#ffc107;">
+                    ⚠️ Kelola username & password untuk login admin.
+                </div>
+                
+                <!-- Form Tambah/Edit User -->
+                <div class="form-box">
+                    <h4 id="userFormTitle">➕ Tambah User Baru</h4>
+                    <input type="hidden" id="editUserKey" value="">
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label><span class="wajib">*</span> Username:</label>
+                            <input type="text" id="inputNewUsername" placeholder="Username untuk login" autocomplete="off">
+                            <span class="error-text" id="errorNewUsername">⚠️ Username wajib diisi!</span>
+                        </div>
+                        <div class="form-group">
+                            <label>Nama Tampilan:</label>
+                            <input type="text" id="inputDisplayName" placeholder="Nama yang ditampilkan">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label><span class="wajib">*</span> Password:</label>
+                            <input type="text" id="inputNewPassword" placeholder="Password untuk login" autocomplete="off">
+                            <span class="error-text" id="errorNewPassword">⚠️ Password wajib diisi!</span>
+                        </div>
+                        <div class="form-group">
+                            <label>Role:</label>
+                            <select id="inputRole">
+                                <option value="admin">Admin (Akses Penuh)</option>
+                                <option value="user">User (Terbatas)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <button class="btn btn-success" id="btnSimpanUser">💾 Simpan User</button>
+                    <button class="btn btn-secondary" id="btnBatalUser" style="display:none;">❌ Batal Edit</button>
+                </div>
+                
+                <!-- Daftar User -->
+                <h4>📋 Daftar User:</h4>
+                <div class="table-wrapper">
+                    <table class="user-table">
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Nama</th>
+                                <th>Role</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bodyTabelUsers"></tbody>
+                    </table>
+                </div>
+                <div id="emptyUsers" style="text-align:center;padding:20px;color:#888;display:none;">
+                    📭 Belum ada user.
+                </div>
+                
+                <div class="note" style="margin-top:15px;">
+                    ⚠️ Jangan hapus semua admin. Pastikan minimal 1 admin tersisa.
+                </div>
+            </div>
         </div>
     </div>
     
@@ -495,7 +541,7 @@
         const usersRef = ref(db, 'users');
         
         // ==========================================
-        // USER SYSTEM
+        // DEFAULT USERS
         // ==========================================
         const DEFAULT_USERS = {
             admin: { password: 'admin123', role: 'admin', nama: 'Administrator' }
@@ -519,12 +565,20 @@
             get(usersRef).then(snapshot => {
                 if (!snapshot.exists()) {
                     set(usersRef, DEFAULT_USERS);
-                    usersData = DEFAULT_USERS;
+                    usersData = { ...DEFAULT_USERS };
                 } else {
                     usersData = snapshot.val();
                 }
+                renderTabelUsers();
             }).catch(() => {
-                usersData = DEFAULT_USERS;
+                usersData = { ...DEFAULT_USERS };
+                renderTabelUsers();
+            });
+        }
+        
+        function saveUsers() {
+            set(usersRef, usersData).catch(err => {
+                showNotification('⚠️ Gagal menyimpan user', 'error');
             });
         }
         
@@ -548,19 +602,15 @@
                 if (users[username] && users[username].password === password) {
                     currentUser = {
                         username: username,
-                        role: users[username].role,
-                        nama: users[username].nama
+                        role: users[username].role || 'admin',
+                        nama: users[username].nama || username
                     };
                     
                     sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
                     
-                    // Tutup modal
                     document.getElementById('loginModal').classList.remove('show');
-                    
-                    // Update UI
                     updateUIForRole();
                     
-                    // Clear input
                     document.getElementById('loginUsername').value = '';
                     document.getElementById('loginPassword').value = '';
                     
@@ -572,14 +622,10 @@
             };
             
             get(usersRef).then(snapshot => {
-                if (snapshot.exists()) {
-                    usersData = snapshot.val();
-                    checkLogin(usersData);
-                } else {
-                    checkLogin(DEFAULT_USERS);
-                }
+                usersData = snapshot.exists() ? snapshot.val() : { ...DEFAULT_USERS };
+                checkLogin(usersData);
             }).catch(() => {
-                checkLogin(DEFAULT_USERS);
+                checkLogin(usersData);
             });
         }
         
@@ -591,9 +637,8 @@
                 sessionStorage.removeItem('currentUser');
                 updateUIForRole();
                 
-                // Jika di tab admin, pindah ke pinjam
                 const activePanel = document.querySelector('.tab-panel.active');
-                if (activePanel && (activePanel.id === 'tab-kembali' || activePanel.id === 'tab-edit')) {
+                if (activePanel && ['tab-kembali', 'tab-edit', 'tab-users'].includes(activePanel.id)) {
                     switchTab('tab-pinjam');
                 }
                 
@@ -604,19 +649,15 @@
         function updateUIForRole() {
             const isAdminUser = currentUser && currentUser.role === 'admin';
             
-            // Header
             document.getElementById('adminBadge').style.display = isAdminUser ? 'inline-block' : 'none';
             document.getElementById('btnOpenLogin').style.display = isAdminUser ? 'none' : 'inline-block';
             document.getElementById('btnLogout').style.display = isAdminUser ? 'inline-block' : 'none';
-            
-            // Admin tabs - selalu tampil tapi terkunci jika bukan admin
-            const adminTabs = document.querySelectorAll('.admin-only');
-            adminTabs.forEach(tab => {
-                tab.style.display = 'block'; // selalu tampil
-            });
-            
-            // Reset button
             document.getElementById('resetRiwayatBtn').style.display = isAdminUser ? 'inline-block' : 'none';
+            
+            // Refresh daftar user jika admin
+            if (isAdminUser) {
+                initUsers();
+            }
         }
         
         function isAdmin() {
@@ -1011,6 +1052,173 @@
         }
         
         // ==========================================
+        // RENDER USER TABLE
+        // ==========================================
+        function renderTabelUsers() {
+            const tbody = document.getElementById('bodyTabelUsers');
+            const emptyMsg = document.getElementById('emptyUsers');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            
+            const userList = Object.entries(usersData);
+            
+            emptyMsg.style.display = userList.length === 0 ? 'block' : 'none';
+            
+            userList.forEach(([username, data]) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${username}</strong></td>
+                    <td>${data.nama || username}</td>
+                    <td>${data.role === 'admin' ? '<span class="admin-badge">Admin</span>' : 'User'}</td>
+                    <td>
+                        <button class="btn btn-warning btn-sm btn-edit-user" data-username="${username}">✏️</button>
+                        <button class="btn btn-danger btn-sm btn-hapus-user" data-username="${username}">🗑</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            
+            document.querySelectorAll('.btn-edit-user').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    editUser(this.getAttribute('data-username'));
+                });
+            });
+            
+            document.querySelectorAll('.btn-hapus-user').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    hapusUser(this.getAttribute('data-username'));
+                });
+            });
+        }
+        
+        // ==========================================
+        // USER MANAGEMENT
+        // ==========================================
+        function resetUserForm() {
+            document.getElementById('editUserKey').value = '';
+            document.getElementById('inputNewUsername').value = '';
+            document.getElementById('inputDisplayName').value = '';
+            document.getElementById('inputNewPassword').value = '';
+            document.getElementById('inputRole').value = 'admin';
+            document.getElementById('userFormTitle').textContent = '➕ Tambah User Baru';
+            document.getElementById('btnBatalUser').style.display = 'none';
+            
+            document.getElementById('inputNewUsername').disabled = false;
+            document.getElementById('errorNewUsername').style.display = 'none';
+            document.getElementById('errorNewPassword').style.display = 'none';
+            document.getElementById('inputNewUsername').classList.remove('error-input');
+            document.getElementById('inputNewPassword').classList.remove('error-input');
+        }
+        
+        function editUser(username) {
+            const user = usersData[username];
+            if (!user) return;
+            
+            document.getElementById('editUserKey').value = username;
+            document.getElementById('inputNewUsername').value = username;
+            document.getElementById('inputNewUsername').disabled = true; // Username tidak bisa diubah saat edit
+            document.getElementById('inputDisplayName').value = user.nama || '';
+            document.getElementById('inputNewPassword').value = user.password || '';
+            document.getElementById('inputRole').value = user.role || 'admin';
+            document.getElementById('userFormTitle').textContent = `✏️ Edit User: ${username}`;
+            document.getElementById('btnBatalUser').style.display = 'inline-block';
+        }
+        
+        function hapusUser(username) {
+            if (!requireAdmin('hapus user')) return;
+            
+            // Cek jangan hapus diri sendiri
+            if (currentUser && currentUser.username === username) {
+                showNotification('❌ Tidak bisa menghapus akun sendiri!', 'error');
+                return;
+            }
+            
+            // Cek admin terakhir
+            const adminCount = Object.values(usersData).filter(u => u.role === 'admin').length;
+            const userData = usersData[username];
+            if (userData && userData.role === 'admin' && adminCount <= 1) {
+                showNotification('❌ Tidak bisa menghapus admin terakhir!', 'error');
+                return;
+            }
+            
+            if (!confirm(`Yakin hapus user "${username}"?`)) return;
+            
+            delete usersData[username];
+            saveUsers();
+            renderTabelUsers();
+            showNotification(`✅ User "${username}" dihapus`, 'success');
+        }
+        
+        function simpanUser() {
+            if (!requireAdmin('simpan user')) return;
+            
+            const editKey = document.getElementById('editUserKey').value;
+            const username = document.getElementById('inputNewUsername').value.trim();
+            const nama = document.getElementById('inputDisplayName').value.trim();
+            const password = document.getElementById('inputNewPassword').value.trim();
+            const role = document.getElementById('inputRole').value;
+            
+            // Reset errors
+            document.getElementById('inputNewUsername').classList.remove('error-input');
+            document.getElementById('inputNewPassword').classList.remove('error-input');
+            document.getElementById('errorNewUsername').style.display = 'none';
+            document.getElementById('errorNewPassword').style.display = 'none';
+            
+            let valid = true;
+            
+            if (!username) {
+                document.getElementById('inputNewUsername').classList.add('error-input');
+                document.getElementById('errorNewUsername').style.display = 'block';
+                valid = false;
+            }
+            
+            if (!password) {
+                document.getElementById('inputNewPassword').classList.add('error-input');
+                document.getElementById('errorNewPassword').style.display = 'block';
+                valid = false;
+            }
+            
+            if (!valid) {
+                showNotification('❌ Username dan Password wajib diisi!', 'error');
+                return;
+            }
+            
+            // Jika tambah baru, cek username sudah ada
+            if (!editKey && usersData[username]) {
+                showNotification('❌ Username sudah ada! Gunakan username lain.', 'error');
+                return;
+            }
+            
+            // Jika edit dan username berbeda (seharusnya tidak bisa karena disabled)
+            if (editKey && editKey !== username && usersData[username]) {
+                showNotification('❌ Username sudah ada!', 'error');
+                return;
+            }
+            
+            // Simpan
+            if (editKey && editKey !== username) {
+                // Username berubah
+                delete usersData[editKey];
+            }
+            
+            usersData[username] = {
+                password: password,
+                role: role,
+                nama: nama || username
+            };
+            
+            saveUsers();
+            resetUserForm();
+            renderTabelUsers();
+            
+            if (editKey) {
+                showNotification(`✅ User "${username}" diupdate!`, 'success');
+            } else {
+                showNotification(`✅ User "${username}" ditambahkan!`, 'success');
+            }
+        }
+        
+        // ==========================================
         // PEMINJAMAN (TANPA LOGIN)
         // ==========================================
         function pinjamBarang(kode) {
@@ -1308,8 +1516,7 @@
         // SWITCH TAB
         // ==========================================
         function switchTab(tabId) {
-            // Cek akses admin
-            if ((tabId === 'tab-kembali' || tabId === 'tab-edit') && !isAdmin()) {
+            if (['tab-kembali', 'tab-edit', 'tab-users'].includes(tabId) && !isAdmin()) {
                 showNotification('🔒 Login admin diperlukan!', 'error');
                 document.getElementById('loginModal').classList.add('show');
                 return;
@@ -1331,6 +1538,7 @@
             if (tabId === 'tab-kembali') renderTabelKembali();
             if (tabId === 'tab-status') renderTabelStatus('semua');
             if (tabId === 'tab-edit') renderTabelEdit();
+            if (tabId === 'tab-users') renderTabelUsers();
         }
         
         // ==========================================
@@ -1372,11 +1580,9 @@
         // EVENT LISTENERS
         // ==========================================
         document.addEventListener('DOMContentLoaded', function() {
-            // Init users & data
             initUsers();
             syncFromFirebase();
             
-            // Check saved session
             const savedUser = sessionStorage.getItem('currentUser');
             if (savedUser) {
                 try {
@@ -1410,8 +1616,7 @@
                 btn.addEventListener('click', function() {
                     const tabId = this.getAttribute('data-tab');
                     
-                    // Admin tabs - buka modal login jika belum login
-                    if ((tabId === 'tab-kembali' || tabId === 'tab-edit') && !isAdmin()) {
+                    if (['tab-kembali', 'tab-edit', 'tab-users'].includes(tabId) && !isAdmin()) {
                         document.getElementById('loginModal').classList.add('show');
                         showNotification('🔒 Login admin diperlukan!', 'error');
                         return;
@@ -1465,7 +1670,7 @@
                 });
             });
             
-            // Export riwayat
+            // Export
             document.getElementById('exportRiwayatBtn').addEventListener('click', function() {
                 let csv = 'Nama Barang,Inventaris,Kode,Peminjam,Kelas,Alamat,Status,Tgl Pinjam,Tgl Kembali,Durasi\n';
                 
@@ -1630,6 +1835,19 @@
                 link.click();
                 URL.revokeObjectURL(url);
             });
+            
+            // ==========================================
+            // USER MANAGEMENT EVENTS
+            // ==========================================
+            document.getElementById('btnSimpanUser').addEventListener('click', simpanUser);
+            document.getElementById('btnBatalUser').addEventListener('click', resetUserForm);
+            
+            document.getElementById('inputNewUsername').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') simpanUser();
+            });
+            document.getElementById('inputNewPassword').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') simpanUser();
+            });
         });
         
         window.addEventListener('beforeunload', () => {
@@ -1637,7 +1855,7 @@
             stopScannerKembali();
         });
         
-        console.log('✅ Sistem siap! Peminjaman & Riwayat = tanpa login, Pengembalian & Edit = admin only');
+        console.log('✅ Sistem siap!');
     </script>
 </body>
 </html>
