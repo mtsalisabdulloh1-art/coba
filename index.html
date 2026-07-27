@@ -145,6 +145,89 @@
             background: #fff3cd; border: 1px solid #ffc107;
         }
         
+        /* ========== SCAN POPUP ========== */
+        .scan-popup {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            animation: popupFade 0.3s ease;
+        }
+        .scan-popup.show { display: flex; }
+        
+        @keyframes popupFade {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
+        .scan-popup-content {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            animation: popupBounce 0.4s ease;
+        }
+        
+        @keyframes popupBounce {
+            0% { transform: scale(0.5); opacity: 0; }
+            60% { transform: scale(1.05); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .scan-popup-content .icon {
+            font-size: 64px;
+            margin-bottom: 10px;
+        }
+        .scan-popup-content .icon.success { color: #28a745; }
+        .scan-popup-content .icon.error { color: #dc3545; }
+        .scan-popup-content .icon.warning { color: #ffc107; }
+        
+        .scan-popup-content h2 {
+            font-size: 20px;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        .scan-popup-content .sub {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+        .scan-popup-content .detail {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 13px;
+            text-align: left;
+        }
+        .scan-popup-content .detail .label {
+            font-weight: 600;
+            color: #555;
+            display: inline-block;
+            min-width: 80px;
+        }
+        .scan-popup-content .btn {
+            padding: 10px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            margin: 5px;
+        }
+        .scan-popup-content .btn-primary { background: #007bff; color: white; }
+        .scan-popup-content .btn-success { background: #28a745; color: white; }
+        .scan-popup-content .btn-danger { background: #dc3545; color: white; }
+        .scan-popup-content .btn-warning { background: #ffc107; color: #333; }
+        .scan-popup-content .btn:active { transform: scale(0.95); }
+        
         .info-aktif {
             background: #d4edda; border: 1px solid #28a745;
             border-radius: 8px; padding: 10px; margin-bottom: 10px; font-size: 12px;
@@ -164,6 +247,25 @@
         .btn-sm { padding: 6px 12px; font-size: 11px; }
         .btn-block { display: block; width: 100%; margin: 5px 0; }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-scan {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            font-size: 16px;
+            border-radius: 50px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s ease;
+        }
+        .btn-scan:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        }
+        .btn-scan:active {
+            transform: scale(0.95);
+        }
+        .btn-scan .icon-camera {
+            margin-right: 8px;
+        }
         
         .table-wrapper { overflow-x: auto; margin-top: 10px; max-height: 350px; overflow-y: auto; }
         table { width: 100%; border-collapse: collapse; font-size: 11px; min-width: 600px; }
@@ -262,6 +364,20 @@
             background: #f8f9fa;
             border-radius: 8px;
         }
+        
+        /* Tombol Scan Popup di tengah */
+        .scan-trigger-container {
+            display: flex;
+            justify-content: center;
+            margin: 15px 0;
+        }
+        
+        /* Countdown timer untuk restart kamera */
+        .restart-countdown {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -308,6 +424,24 @@
             <button class="btn btn-primary" id="btnChangePassword">💾 Simpan Password</button>
             <button class="btn btn-secondary" id="btnCloseChangePassword">❌ Batal</button>
             <div class="modal-error" id="changePasswordError" style="display:none;"></div>
+        </div>
+    </div>
+    
+    <!-- ==================== SCAN RESULT POPUP ==================== -->
+    <div class="scan-popup" id="scanPopup">
+        <div class="scan-popup-content">
+            <div class="icon" id="popupIcon">✅</div>
+            <h2 id="popupTitle">Scan Berhasil</h2>
+            <div class="sub" id="popupSub">Detail hasil scan</div>
+            <div class="detail" id="popupDetail">
+                <div><span class="label">📦 Barang:</span> <span id="popupBarang">-</span></div>
+                <div><span class="label">🏷️ Kode:</span> <span id="popupKode">-</span></div>
+                <div><span class="label">👤 Peminjam:</span> <span id="popupPeminjam">-</span></div>
+                <div><span class="label">📅 Waktu:</span> <span id="popupWaktu">-</span></div>
+            </div>
+            <div id="popupActions">
+                <button class="btn btn-primary" id="popupCloseBtn">✅ OK</button>
+            </div>
         </div>
     </div>
     
@@ -368,13 +502,25 @@
                     <strong>Alamat:</strong> <span id="infoAlamat"></span>
                 </div>
                 
+                <!-- TOMBOL SCAN -->
+                <div class="scan-trigger-container">
+                    <button class="btn btn-scan" id="scanTriggerBtn">
+                        <span class="icon-camera">📷</span> SCAN BARCODE
+                    </button>
+                </div>
+                
                 <div id="readerPinjam" style="position:relative;">
                     <div class="loading-overlay" id="loadingPinjam">
                         <div class="loading-spinner"></div>
                     </div>
                 </div>
                 <div class="camera-debug" id="debugPinjam"></div>
-                  
+                
+                <div class="scan-buttons">
+                    <button class="btn btn-danger" id="stopPinjamBtn" style="display:none;">⏹ Stop Kamera</button>
+                    <button class="btn btn-warning" id="switchCameraPinjam" style="display:none;">🔄 Ganti Kamera</button>
+                </div>
+                
                 <div class="manual-input">
                     <input type="text" id="manualPinjamInput" placeholder="Atau ketik kode barcode manual...">
                     <button class="btn btn-warning" id="manualPinjamBtn">✋ Pinjam Manual</button>
@@ -397,13 +543,25 @@
                 <h3>🔄 Pengembalian Barang <span class="admin-badge">🔑 ADMIN</span></h3>
                 <div class="info-aktif" style="background:#fff3cd;border-color:#ffc107;">⚠️ Hanya admin yang bisa mengembalikan barang.</div>
                 
+                <!-- TOMBOL SCAN -->
+                <div class="scan-trigger-container">
+                    <button class="btn btn-scan" id="scanTriggerKembali">
+                        <span class="icon-camera">📷</span> SCAN BARCODE
+                    </button>
+                </div>
+                
                 <div id="readerKembali" style="position:relative;">
                     <div class="loading-overlay" id="loadingKembali">
                         <div class="loading-spinner"></div>
                     </div>
                 </div>
                 <div class="camera-debug" id="debugKembali"></div>
-                         
+                
+                <div class="scan-buttons">
+                    <button class="btn btn-danger" id="stopKembaliBtn" style="display:none;">⏹ Stop Kamera</button>
+                    <button class="btn btn-warning" id="switchCameraKembali" style="display:none;">🔄 Ganti Kamera</button>
+                </div>
+                
                 <div class="manual-input">
                     <input type="text" id="manualKembaliInput" placeholder="Atau ketik kode barcode manual...">
                     <button class="btn btn-warning" id="manualKembaliBtn">✋ Kembalikan Manual</button>
@@ -578,7 +736,7 @@
         let peminjamAktif = null;
         
         // ==========================================
-        // QR CODE SCANNER - AUTO START
+        // QR CODE SCANNER
         // ==========================================
         let html5QrCode = null;
         let isScanning = false;
@@ -587,7 +745,121 @@
         let lastScanTime = 0;
         let scannerType = 'pinjam';
         let isStarting = false;
+        let isRestarting = false;
+        let restartTimeout = null;
         
+        // ==========================================
+        // SCAN POPUP
+        // ==========================================
+        function showScanPopup(data) {
+            const popup = document.getElementById('scanPopup');
+            const icon = document.getElementById('popupIcon');
+            const title = document.getElementById('popupTitle');
+            const sub = document.getElementById('popupSub');
+            const barang = document.getElementById('popupBarang');
+            const kode = document.getElementById('popupKode');
+            const peminjam = document.getElementById('popupPeminjam');
+            const waktu = document.getElementById('popupWaktu');
+            const actions = document.getElementById('popupActions');
+            
+            // Reset
+            popup.className = 'scan-popup';
+            
+            if (data.success) {
+                icon.className = 'icon success';
+                icon.textContent = '✅';
+                title.textContent = data.title || 'Berhasil!';
+                sub.textContent = data.sub || 'Scan berhasil diproses';
+            } else if (data.warning) {
+                icon.className = 'icon warning';
+                icon.textContent = '⚠️';
+                title.textContent = data.title || 'Peringatan';
+                sub.textContent = data.sub || 'Periksa kembali data';
+            } else {
+                icon.className = 'icon error';
+                icon.textContent = '❌';
+                title.textContent = data.title || 'Gagal!';
+                sub.textContent = data.sub || 'Terjadi kesalahan';
+            }
+            
+            barang.textContent = data.barang || '-';
+            kode.textContent = data.kode || '-';
+            peminjam.textContent = data.peminjam || '-';
+            waktu.textContent = data.waktu || '-';
+            
+            // Tombol action
+            actions.innerHTML = '';
+            if (data.buttons) {
+                data.buttons.forEach(btn => {
+                    const button = document.createElement('button');
+                    button.className = `btn ${btn.class || 'btn-primary'}`;
+                    button.textContent = btn.label;
+                    button.onclick = () => {
+                        if (btn.action) btn.action();
+                        closeScanPopup();
+                    };
+                    actions.appendChild(button);
+                });
+            } else {
+                const okBtn = document.createElement('button');
+                okBtn.className = 'btn btn-primary';
+                okBtn.textContent = '✅ OK';
+                okBtn.onclick = closeScanPopup;
+                actions.appendChild(okBtn);
+            }
+            
+            popup.classList.add('show');
+            
+            // Auto close after 5 seconds if success
+            if (data.success) {
+                setTimeout(() => {
+                    if (popup.classList.contains('show')) {
+                        closeScanPopup();
+                    }
+                }, 5000);
+            }
+        }
+        
+        function closeScanPopup() {
+            document.getElementById('scanPopup').classList.remove('show');
+        }
+        
+        // ==========================================
+        // RESTART CAMERA AFTER SCAN
+        // ==========================================
+        function restartCameraAfterScan(type, delay = 1500) {
+            if (isRestarting) return;
+            isRestarting = true;
+            
+            if (restartTimeout) {
+                clearTimeout(restartTimeout);
+                restartTimeout = null;
+            }
+            
+            // Tampilkan pesan restart
+            const resultEl = document.getElementById(type === 'pinjam' ? 'scanPinjamResult' : 'scanKembaliResult');
+            if (resultEl) {
+                resultEl.innerHTML = '⏳ Memulai ulang kamera...';
+                resultEl.style.background = '#d4edda';
+                resultEl.style.borderColor = '#28a745';
+            }
+            
+            restartTimeout = setTimeout(async () => {
+                try {
+                    await stopScanner(true);
+                    await startScanner(type);
+                    isRestarting = false;
+                    restartTimeout = null;
+                } catch (err) {
+                    console.error('Restart scanner error:', err);
+                    isRestarting = false;
+                }
+            }, delay);
+        }
+        
+        // ==========================================
+        // LOAD HTML5QRCODE
+        // ==========================================
         async function loadHtml5QrCode() {
             return new Promise((resolve, reject) => {
                 if (typeof window.Html5Qrcode !== 'undefined') {
@@ -621,6 +893,9 @@
             });
         }
         
+        // ==========================================
+        // START / STOP SCANNER
+        // ==========================================
         async function startScanner(type) {
             if (isStarting) return;
             isStarting = true;
@@ -648,7 +923,7 @@
             await stopScanner(true);
             
             loadingEl.classList.add('show');
-            debugLog(type, '🔄 Memulai kamera otomatis...');
+            debugLog(type, '🔄 Memulai kamera...');
             
             try {
                 const Html5Qrcode = await loadHtml5QrCode();
@@ -674,18 +949,26 @@
                     (decodedText) => {
                         const kode = decodedText.trim();
                         const now = Date.now();
-                        if (kode === lastScannedCode && (now - lastScanTime) < 2000) return;
+                        if (kode === lastScannedCode && (now - lastScanTime) < 3000) return;
                         lastScannedCode = kode;
                         lastScanTime = now;
                         debugLog(type, `✅ Barcode: ${kode}`);
                         
                         if (navigator.vibrate) navigator.vibrate(100);
                         
+                        // Hentikan scanner sementara saat memproses
+                        stopScanner(true);
+                        
                         if (isPinjam) {
                             pinjamBarang(kode);
                         } else {
                             kembalikanBarang(kode);
                         }
+                        
+                        // Restart kamera setelah delay
+                        setTimeout(() => {
+                            restartCameraAfterScan(type, 1500);
+                        }, 500);
                     },
                     (error) => {}
                 );
@@ -761,25 +1044,6 @@
                 document.querySelectorAll('.loading-overlay').forEach(el => {
                     el.classList.remove('show');
                 });
-                
-                // Reset result
-                const pinjamResult = document.getElementById('scanPinjamResult');
-                if (pinjamResult && !peminjamAktif) {
-                    pinjamResult.innerHTML = '⚠️ Isi data peminjam terlebih dahulu!';
-                    pinjamResult.style.background = '#f8d7da';
-                    pinjamResult.style.borderColor = '#dc3545';
-                } else if (pinjamResult) {
-                    pinjamResult.innerHTML = '📷 Kamera otomatis menyala untuk scan';
-                    pinjamResult.style.background = '#fff3cd';
-                    pinjamResult.style.borderColor = '#ffc107';
-                }
-                
-                const kembaliResult = document.getElementById('scanKembaliResult');
-                if (kembaliResult) {
-                    kembaliResult.innerHTML = '📷 Kamera otomatis menyala untuk scan';
-                    kembaliResult.style.background = '#fff3cd';
-                    kembaliResult.style.borderColor = '#ffc107';
-                }
             }
         }
         
@@ -1561,10 +1825,15 @@
             const scanResult = document.getElementById('scanPinjamResult');
             
             if (!peminjamAktif || !peminjamAktif.nama) {
-                if (scanResult) {
-                    scanResult.innerHTML = '⚠️ Isi data peminjam terlebih dahulu!';
-                    scanResult.style.background = '#f8d7da';
-                }
+                showScanPopup({
+                    success: false,
+                    title: '❌ Data Peminjam Kosong',
+                    sub: 'Silakan isi data peminjam terlebih dahulu',
+                    barang: '-',
+                    kode: kode,
+                    peminjam: '-',
+                    waktu: formatDateTime(new Date())
+                });
                 showNotification('❌ Isi Nama & Kelas peminjam dulu!', 'error');
                 return false;
             }
@@ -1572,10 +1841,15 @@
             const barang = DATA_BARANG.find(b => b.kode === kode);
             
             if (!barang) {
-                if (scanResult) {
-                    scanResult.innerHTML = `❌ Kode <strong>"${kode}"</strong> tidak terdaftar`;
-                    scanResult.style.background = '#f8d7da';
-                }
+                showScanPopup({
+                    success: false,
+                    title: '❌ Kode Tidak Terdaftar',
+                    sub: `Kode "${kode}" tidak ditemukan dalam database`,
+                    barang: '-',
+                    kode: kode,
+                    peminjam: '-',
+                    waktu: formatDateTime(new Date())
+                });
                 showNotification('❌ Kode tidak terdaftar', 'error');
                 return false;
             }
@@ -1583,10 +1857,15 @@
             const status = statusPeminjaman[kode] || { dipinjam: false };
             
             if (status.dipinjam) {
-                if (scanResult) {
-                    scanResult.innerHTML = `⚠️ <strong>${barang.nama}</strong> sudah dipinjam`;
-                    scanResult.style.background = '#fff3cd';
-                }
+                showScanPopup({
+                    success: false,
+                    title: '⚠️ Barang Sedang Dipinjam',
+                    sub: `"${barang.nama}" sedang dipinjam oleh ${status.peminjam ? status.peminjam.nama : '-'}`,
+                    barang: barang.nama,
+                    kode: kode,
+                    peminjam: status.peminjam ? status.peminjam.nama : '-',
+                    waktu: formatDateTime(status.waktuPinjam)
+                });
                 showNotification(`⚠️ ${barang.nama} sudah dipinjam`, 'warning');
                 return false;
             }
@@ -1607,6 +1886,20 @@
             saveStatusToFirebase();
             saveRiwayatToFirebase();
             
+            // TAMPILKAN POPUP HASIL
+            showScanPopup({
+                success: true,
+                title: '✅ Peminjaman Berhasil',
+                sub: `"${barang.nama}" berhasil dipinjam`,
+                barang: barang.nama,
+                kode: kode,
+                peminjam: peminjamAktif.nama,
+                waktu: formatDateTime(status.waktuPinjam),
+                buttons: [
+                    { label: '✅ OK', class: 'btn-success', action: () => {} }
+                ]
+            });
+            
             if (scanResult) {
                 scanResult.innerHTML = `✅ <strong>${barang.nama}</strong> dipinjam oleh <strong>${peminjamAktif.nama}</strong><br>📅 ${formatDateTime(status.waktuPinjam)}`;
                 scanResult.style.background = '#d4edda';
@@ -1614,6 +1907,12 @@
             
             renderTabelPinjam();
             showNotification(`✅ ${barang.nama} dipinjam!`, 'success');
+            
+            // Restart camera after popup
+            setTimeout(() => {
+                restartCameraAfterScan('pinjam', 1000);
+            }, 100);
+            
             return true;
         }
         
@@ -1621,16 +1920,32 @@
         // PENGEMBALIAN
         // ==========================================
         function kembalikanBarang(kode) {
-            if (!requireAdmin('mengembalikan barang')) return false;
+            if (!requireAdmin('mengembalikan barang')) {
+                showScanPopup({
+                    success: false,
+                    title: '🔒 Akses Ditolak',
+                    sub: 'Login admin diperlukan untuk mengembalikan barang',
+                    barang: '-',
+                    kode: kode,
+                    peminjam: '-',
+                    waktu: formatDateTime(new Date())
+                });
+                return false;
+            }
             
             const scanResult = document.getElementById('scanKembaliResult');
             const barang = DATA_BARANG.find(b => b.kode === kode);
             
             if (!barang) {
-                if (scanResult) {
-                    scanResult.innerHTML = `❌ Kode <strong>"${kode}"</strong> tidak terdaftar`;
-                    scanResult.style.background = '#f8d7da';
-                }
+                showScanPopup({
+                    success: false,
+                    title: '❌ Kode Tidak Terdaftar',
+                    sub: `Kode "${kode}" tidak ditemukan dalam database`,
+                    barang: '-',
+                    kode: kode,
+                    peminjam: '-',
+                    waktu: formatDateTime(new Date())
+                });
                 showNotification('❌ Kode tidak terdaftar', 'error');
                 return false;
             }
@@ -1638,15 +1953,21 @@
             const status = statusPeminjaman[kode];
             
             if (!status || !status.dipinjam) {
-                if (scanResult) {
-                    scanResult.innerHTML = `⚠️ <strong>${barang.nama}</strong> tidak sedang dipinjam`;
-                    scanResult.style.background = '#fff3cd';
-                }
+                showScanPopup({
+                    success: false,
+                    title: '⚠️ Barang Tidak Dipinjam',
+                    sub: `"${barang.nama}" tidak sedang dipinjam`,
+                    barang: barang.nama,
+                    kode: kode,
+                    peminjam: '-',
+                    waktu: formatDateTime(new Date())
+                });
                 showNotification(`⚠️ ${barang.nama} tidak dipinjam`, 'warning');
                 return false;
             }
             
             const waktuKembali = new Date().toISOString();
+            const durasi = formatDurasi(status.waktuPinjam, waktuKembali);
             
             status.riwayat = status.riwayat || [];
             status.riwayat.push({
@@ -1661,14 +1982,26 @@
                 riwayatAktif.status = 'dikembalikan';
             }
             
-            const durasi = formatDurasi(status.waktuPinjam, waktuKembali);
-            
             status.dipinjam = false;
             status.waktuKembali = waktuKembali;
             statusPeminjaman[kode] = status;
             
             saveStatusToFirebase();
             saveRiwayatToFirebase();
+            
+            // TAMPILKAN POPUP HASIL
+            showScanPopup({
+                success: true,
+                title: '🔄 Pengembalian Berhasil',
+                sub: `"${barang.nama}" berhasil dikembalikan`,
+                barang: barang.nama,
+                kode: kode,
+                peminjam: status.peminjam ? status.peminjam.nama : '-',
+                waktu: formatDateTime(waktuKembali),
+                buttons: [
+                    { label: '✅ OK', class: 'btn-success', action: () => {} }
+                ]
+            });
             
             if (scanResult) {
                 scanResult.innerHTML = `🔄 <strong>${barang.nama}</strong> dikembalikan<br>⏱ ${durasi}`;
@@ -1678,6 +2011,12 @@
             renderTabelKembali();
             renderTabelStatus('semua');
             showNotification(`✅ ${barang.nama} dikembalikan!`, 'info');
+            
+            // Restart camera after popup
+            setTimeout(() => {
+                restartCameraAfterScan('kembali', 1000);
+            }, 100);
+            
             return true;
         }
         
@@ -1837,6 +2176,29 @@
                     sessionStorage.removeItem('currentUser');
                 }
             }
+            
+            // ==== TOMBOL SCAN TRIGGER ====
+            document.getElementById('scanTriggerBtn').addEventListener('click', function() {
+                if (!peminjamAktif || !peminjamAktif.nama) {
+                    showNotification('⚠️ Isi data peminjam terlebih dahulu!', 'warning');
+                    return;
+                }
+                // Stop kamera jika sedang berjalan, lalu start ulang
+                stopScanner(true);
+                setTimeout(() => {
+                    startScanner('pinjam');
+                }, 300);
+                showNotification('📷 Membuka kamera...', 'info');
+            });
+            
+            document.getElementById('scanTriggerKembali').addEventListener('click', function() {
+                if (!requireAdmin('scan pengembalian')) return;
+                stopScanner(true);
+                setTimeout(() => {
+                    startScanner('kembali');
+                }, 300);
+                showNotification('📷 Membuka kamera...', 'info');
+            });
             
             // Login modal
             document.getElementById('btnOpenLogin').addEventListener('click', () => {
