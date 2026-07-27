@@ -144,7 +144,6 @@
             height: auto !important;
             display: block !important;
         }
-        /* Tambahan untuk memastikan kamera terlihat */
         #readerPinjam canvas, #readerKembali canvas {
             display: none !important;
         }
@@ -388,6 +387,8 @@
             font-size: 14px;
             background: #f8f9fa;
             border-radius: 8px;
+            flex-direction: column;
+            gap: 10px;
         }
         
         .scan-trigger-container {
@@ -429,6 +430,20 @@
         .camera-status.testing {
             background: #fff3cd;
             color: #856404;
+        }
+        
+        .btn-restart-camera {
+            background: #17a2b8;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            margin: 5px;
+        }
+        .btn-restart-camera:hover {
+            background: #138496;
         }
     </style>
 </head>
@@ -563,6 +578,7 @@
                         <span class="icon-camera">📷</span> SCAN BARCODE
                     </button>
                     <button class="btn btn-test-camera" id="testCameraPinjam">🔧 Test Kamera</button>
+                    <button class="btn btn-restart-camera" id="restartCameraPinjam">🔄 Restart Kamera</button>
                 </div>
                 
                 <div id="readerPinjam" style="position:relative; min-height: 250px;">
@@ -571,6 +587,7 @@
                     </div>
                     <div class="scanner-ready" id="placeholderPinjam">
                         📷 Klik tombol "SCAN BARCODE" untuk memulai kamera
+                        <small style="color:#aaa;">Pastikan izin kamera diizinkan</small>
                     </div>
                 </div>
                 <div class="camera-debug" id="debugPinjam">🔍 Status: Menunggu inisialisasi...</div>
@@ -609,6 +626,7 @@
                         <span class="icon-camera">📷</span> SCAN BARCODE
                     </button>
                     <button class="btn btn-test-camera" id="testCameraKembali">🔧 Test Kamera</button>
+                    <button class="btn btn-restart-camera" id="restartCameraKembali">🔄 Restart Kamera</button>
                 </div>
                 
                 <div id="readerKembali" style="position:relative; min-height: 250px;">
@@ -617,6 +635,7 @@
                     </div>
                     <div class="scanner-ready" id="placeholderKembali">
                         📷 Klik tombol "SCAN BARCODE" untuk memulai kamera
+                        <small style="color:#aaa;">Pastikan izin kamera diizinkan</small>
                     </div>
                 </div>
                 <div class="camera-debug" id="debugKembali">🔍 Status: Menunggu inisialisasi...</div>
@@ -800,7 +819,7 @@
         let peminjamAktif = null;
         
         // ==========================================
-        // QR CODE SCANNER
+        // QR CODE SCANNER - FIXED VERSION
         // ==========================================
         let html5QrCode = null;
         let isScanning = false;
@@ -812,6 +831,7 @@
         let isRestarting = false;
         let restartTimeout = null;
         let cameraTested = false;
+        let scannerCleanupTimer = null;
         
         // ==========================================
         // SCAN POPUP
@@ -945,9 +965,77 @@
         }
         
         // ==========================================
-        // RESTART CAMERA AFTER SCAN
+        // CLEANUP CAMERA RESOURCES - FIXED
         // ==========================================
-        function restartCameraAfterScan(type, delay = 1500) {
+        function cleanupCameraResources(readerId) {
+            return new Promise((resolve) => {
+                // Clean up any existing scanner
+                if (html5QrCode) {
+                    try {
+                        if (isScanning) {
+                            html5QrCode.stop().catch(() => {});
+                        }
+                        html5QrCode.clear().catch(() => {});
+                    } catch (e) {
+                        console.log('Cleanup error:', e);
+                    }
+                    html5QrCode = null;
+                }
+                isScanning = false;
+                
+                // Remove all video and canvas elements from reader
+                const readerEl = document.getElementById(readerId);
+                if (readerEl) {
+                    // Remove all video elements
+                    const videos = readerEl.querySelectorAll('video');
+                    videos.forEach(video => {
+                        if (video.srcObject) {
+                            const tracks = video.srcObject.getTracks();
+                            tracks.forEach(track => track.stop());
+                        }
+                        video.remove();
+                    });
+                    
+                    // Remove all canvas elements
+                    const canvases = readerEl.querySelectorAll('canvas');
+                    canvases.forEach(canvas => canvas.remove());
+                    
+                    // Reset inner HTML but keep loading overlay and placeholder
+                    const loadingOverlay = readerEl.querySelector('.loading-overlay');
+                    const placeholder = readerEl.querySelector('.scanner-ready');
+                    
+                    // Clear but preserve important elements
+                    Array.from(readerEl.children).forEach(child => {
+                        if (!child.classList.contains('loading-overlay') && 
+                            !child.classList.contains('scanner-ready')) {
+                            child.remove();
+                        }
+                    });
+                    
+                    // Ensure placeholder is visible
+                    if (placeholder) {
+                        placeholder.style.display = 'flex';
+                    }
+                }
+                
+                // Additional cleanup: stop any remaining media tracks
+                if (navigator.mediaDevices) {
+                    navigator.mediaDevices.getUserMedia({ video: true })
+                        .then(stream => {
+                            stream.getTracks().forEach(track => track.stop());
+                        })
+                        .catch(() => {});
+                }
+                
+                // Wait a moment for resources to fully release
+                setTimeout(resolve, 300);
+            });
+        }
+        
+        // ==========================================
+        // RESTART CAMERA AFTER SCAN - FIXED
+        // ==========================================
+        function restartCameraAfterScan(type, delay = 2000) {
             if (isRestarting) return;
             isRestarting = true;
             
@@ -958,20 +1046,39 @@
             
             const resultEl = document.getElementById(type === 'pinjam' ? 'scanPinjamResult' : 'scanKembaliResult');
             if (resultEl) {
-                resultEl.innerHTML = '⏳ Memulai ulang kamera...';
-                resultEl.style.background = '#d4edda';
-                resultEl.style.borderColor = '#28a745';
+                resultEl.innerHTML = '⏳ Mematikan kamera...';
+                resultEl.style.background = '#fff3cd';
+                resultEl.style.borderColor = '#ffc107';
             }
+            
+            // First cleanup
+            const readerId = type === 'pinjam' ? 'readerPinjam' : 'readerKembali';
             
             restartTimeout = setTimeout(async () => {
                 try {
-                    await stopScanner(true);
+                    // Cleanup camera resources
+                    await cleanupCameraResources(readerId);
+                    
+                    // Wait a bit longer for resources to release
+                    await new Promise(r => setTimeout(r, 500));
+                    
+                    if (resultEl) {
+                        resultEl.innerHTML = '⏳ Memulai ulang kamera...';
+                    }
+                    
+                    // Start scanner again
                     await startScanner(type);
                     isRestarting = false;
                     restartTimeout = null;
                 } catch (err) {
                     console.error('Restart scanner error:', err);
                     isRestarting = false;
+                    
+                    if (resultEl) {
+                        resultEl.innerHTML = `⚠️ Gagal restart: ${err.message}. Klik SCAN BARCODE untuk mencoba lagi.`;
+                        resultEl.style.background = '#f8d7da';
+                        resultEl.style.borderColor = '#dc3545';
+                    }
                 }
             }, delay);
         }
@@ -1013,7 +1120,7 @@
         }
         
         // ==========================================
-        // START / STOP SCANNER
+        // START / STOP SCANNER - FIXED
         // ==========================================
         async function startScanner(type) {
             if (isStarting) return;
@@ -1044,12 +1151,13 @@
                     statusEl.className = 'camera-status inactive';
                     statusEl.textContent = '⚠️ Isi data peminjam dulu';
                 }
+                if (placeholder) placeholder.style.display = 'flex';
                 isStarting = false;
                 return;
             }
             
-            // Stop scanner yang sedang berjalan
-            await stopScanner(true);
+            // Cleanup sebelum start
+            await cleanupCameraResources(readerId);
             
             loadingEl.classList.add('show');
             if (statusEl) {
@@ -1059,7 +1167,7 @@
             debugLog(type, '🔄 Memulai kamera...');
             
             try {
-                // Test camera first if not tested
+                // Test camera first
                 if (!cameraTested) {
                     await testCamera(type);
                 }
@@ -1071,12 +1179,7 @@
                     throw new Error('Browser tidak mendukung kamera');
                 }
                 
-                // Clear reader
-                const readerEl = document.getElementById(readerId);
-                if (readerEl) {
-                    readerEl.innerHTML = '';
-                }
-                
+                // Create new scanner instance
                 html5QrCode = new Html5Qrcode(readerId);
                 
                 const config = {
@@ -1100,7 +1203,7 @@
                         
                         if (navigator.vibrate) navigator.vibrate(100);
                         
-                        // Hentikan scanner sementara saat memproses
+                        // Stop scanner untuk proses
                         stopScanner(true);
                         
                         if (isPinjam) {
@@ -1111,11 +1214,11 @@
                         
                         // Restart kamera setelah delay
                         setTimeout(() => {
-                            restartCameraAfterScan(type, 1500);
+                            restartCameraAfterScan(type, 2000);
                         }, 500);
                     },
                     (error) => {
-                        // Ignore error
+                        // Ignore scanner errors
                     }
                 );
                 
@@ -1176,26 +1279,10 @@
         }
         
         async function stopScanner(skipUI = false) {
-            if (html5QrCode && isScanning) {
-                try {
-                    await html5QrCode.stop();
-                    await html5QrCode.clear();
-                } catch (e) {
-                    console.log('Stop scanner error:', e);
-                }
-            }
-            
-            isScanning = false;
-            html5QrCode = null;
-            
-            document.querySelectorAll('#readerPinjam, #readerKembali').forEach(el => {
-                if (el) {
-                    const videos = el.querySelectorAll('video');
-                    videos.forEach(v => v.remove());
-                    const canvases = el.querySelectorAll('canvas');
-                    canvases.forEach(c => c.remove());
-                }
-            });
+            // Cleanup resources
+            const type = scannerType || 'pinjam';
+            const readerId = type === 'pinjam' ? 'readerPinjam' : 'readerKembali';
+            await cleanupCameraResources(readerId);
             
             if (!skipUI) {
                 document.querySelectorAll('#stopPinjamBtn, #stopKembaliBtn').forEach(btn => {
@@ -1227,7 +1314,11 @@
         function switchCamera(type) {
             currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
             debugLog(type, `🔄 Ganti ke: ${currentFacingMode}`);
-            startScanner(type);
+            // Cleanup dan restart
+            const readerId = type === 'pinjam' ? 'readerPinjam' : 'readerKembali';
+            cleanupCameraResources(readerId).then(() => {
+                setTimeout(() => startScanner(type), 500);
+            });
         }
         
         // ==========================================
@@ -1521,7 +1612,7 @@
                 renderAllTables();
                 updateInfoPeminjam();
                 
-                // Auto test camera
+                // Auto test camera after load
                 setTimeout(() => {
                     testCamera('pinjam');
                 }, 1000);
@@ -2074,7 +2165,7 @@
             showNotification(`✅ ${barang.nama} dipinjam!`, 'success');
             
             setTimeout(() => {
-                restartCameraAfterScan('pinjam', 1000);
+                restartCameraAfterScan('pinjam', 2000);
             }, 100);
             
             return true;
@@ -2176,7 +2267,7 @@
             showNotification(`✅ ${barang.nama} dikembalikan!`, 'info');
             
             setTimeout(() => {
-                restartCameraAfterScan('kembali', 1000);
+                restartCameraAfterScan('kembali', 2000);
             }, 100);
             
             return true;
@@ -2264,19 +2355,9 @@
             
             if (tabId === 'tab-pinjam') {
                 renderTabelPinjam();
-                setTimeout(() => {
-                    if (peminjamAktif && peminjamAktif.nama) {
-                        // Don't auto start, wait for user click
-                    }
-                }, 300);
             }
             if (tabId === 'tab-kembali') {
                 renderTabelKembali();
-                setTimeout(() => {
-                    if (isAdmin()) {
-                        // Don't auto start, wait for user click
-                    }
-                }, 300);
             }
             if (tabId === 'tab-status') renderTabelStatus('semua');
             if (tabId === 'tab-edit') renderTabelEdit();
@@ -2341,20 +2422,49 @@
                     showNotification('⚠️ Isi data peminjam terlebih dahulu!', 'warning');
                     return;
                 }
-                stopScanner(true);
-                setTimeout(() => {
-                    startScanner('pinjam');
-                }, 300);
+                
+                // Cleanup and start
+                const readerId = 'readerPinjam';
+                cleanupCameraResources(readerId).then(() => {
+                    setTimeout(() => {
+                        startScanner('pinjam');
+                    }, 500);
+                });
                 showNotification('📷 Membuka kamera...', 'info');
             });
             
             document.getElementById('scanTriggerKembali').addEventListener('click', function() {
                 if (!requireAdmin('scan pengembalian')) return;
-                stopScanner(true);
-                setTimeout(() => {
-                    startScanner('kembali');
-                }, 300);
+                
+                const readerId = 'readerKembali';
+                cleanupCameraResources(readerId).then(() => {
+                    setTimeout(() => {
+                        startScanner('kembali');
+                    }, 500);
+                });
                 showNotification('📷 Membuka kamera...', 'info');
+            });
+            
+            // ==== RESTART CAMERA ====
+            document.getElementById('restartCameraPinjam').addEventListener('click', function() {
+                const readerId = 'readerPinjam';
+                cleanupCameraResources(readerId).then(() => {
+                    setTimeout(() => {
+                        startScanner('pinjam');
+                    }, 500);
+                });
+                showNotification('🔄 Merestart kamera...', 'info');
+            });
+            
+            document.getElementById('restartCameraKembali').addEventListener('click', function() {
+                if (!requireAdmin('restart kamera')) return;
+                const readerId = 'readerKembali';
+                cleanupCameraResources(readerId).then(() => {
+                    setTimeout(() => {
+                        startScanner('kembali');
+                    }, 500);
+                });
+                showNotification('🔄 Merestart kamera...', 'info');
             });
             
             // ==== TEST CAMERA ====
