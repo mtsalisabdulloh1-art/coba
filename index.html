@@ -578,7 +578,6 @@
                         <span class="icon-camera">📷</span> SCAN BARCODE
                     </button>
                     <button class="btn btn-test-camera" id="testCameraPinjam">🔧 Test Kamera</button>
-                    <button class="btn btn-restart-camera" id="restartCameraPinjam">🔄 Restart Kamera</button>
                 </div>
                 
                 <div id="readerPinjam" style="position:relative; min-height: 250px;">
@@ -626,7 +625,6 @@
                         <span class="icon-camera">📷</span> SCAN BARCODE
                     </button>
                     <button class="btn btn-test-camera" id="testCameraKembali">🔧 Test Kamera</button>
-                    <button class="btn btn-restart-camera" id="restartCameraKembali">🔄 Restart Kamera</button>
                 </div>
                 
                 <div id="readerKembali" style="position:relative; min-height: 250px;">
@@ -834,6 +832,76 @@
         let scannerCleanupTimer = null;
         
         // ==========================================
+        // AUTO CLEANUP CAMERA CACHE - SETIAP 5 DETIK
+        // ==========================================
+        let autoCleanupInterval = null;
+        
+        function startAutoCleanup() {
+            if (autoCleanupInterval) {
+                clearInterval(autoCleanupInterval);
+            }
+            
+            autoCleanupInterval = setInterval(() => {
+                // Hanya cleanup jika kamera sedang tidak aktif
+                if (!isScanning) {
+                    console.log('🔄 Auto cleanup cache kamera...');
+                    
+                    // Cleanup untuk readerPinjam
+                    const readerPinjam = document.getElementById('readerPinjam');
+                    if (readerPinjam) {
+                        const videos = readerPinjam.querySelectorAll('video');
+                        videos.forEach(video => {
+                            if (video.srcObject) {
+                                const tracks = video.srcObject.getTracks();
+                                tracks.forEach(track => track.stop());
+                            }
+                            video.remove();
+                        });
+                        const canvases = readerPinjam.querySelectorAll('canvas');
+                        canvases.forEach(canvas => canvas.remove());
+                    }
+                    
+                    // Cleanup untuk readerKembali
+                    const readerKembali = document.getElementById('readerKembali');
+                    if (readerKembali) {
+                        const videos = readerKembali.querySelectorAll('video');
+                        videos.forEach(video => {
+                            if (video.srcObject) {
+                                const tracks = video.srcObject.getTracks();
+                                tracks.forEach(track => track.stop());
+                            }
+                            video.remove();
+                        });
+                        const canvases = readerKembali.querySelectorAll('canvas');
+                        canvases.forEach(canvas => canvas.remove());
+                    }
+                    
+                    // Cleanup global html5QrCode
+                    if (html5QrCode) {
+                        try {
+                            html5QrCode.clear().catch(() => {});
+                        } catch(e) {}
+                        html5QrCode = null;
+                    }
+                    
+                    // Reset status kamera
+                    document.querySelectorAll('.camera-status').forEach(el => {
+                        if (!el.textContent.includes('Aktif') && !el.textContent.includes('Error')) {
+                            el.textContent = '📷 Status: Siap';
+                        }
+                    });
+                }
+            }, 5000); // Setiap 5 detik
+        }
+        
+        function stopAutoCleanup() {
+            if (autoCleanupInterval) {
+                clearInterval(autoCleanupInterval);
+                autoCleanupInterval = null;
+            }
+        }
+        
+        // ==========================================
         // SCAN POPUP
         // ==========================================
         function showScanPopup(data) {
@@ -927,12 +995,10 @@
                     throw new Error('Browser tidak mendukung getUserMedia');
                 }
                 
-                // Test camera access
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     video: { facingMode: currentFacingMode } 
                 });
                 
-                // Stop all tracks
                 stream.getTracks().forEach(track => track.stop());
                 
                 if (debugEl) {
@@ -965,11 +1031,11 @@
         }
         
         // ==========================================
-        // CLEANUP CAMERA RESOURCES - FIXED
+        // CLEANUP CAMERA RESOURCES - OTOMATIS
         // ==========================================
         function cleanupCameraResources(readerId) {
             return new Promise((resolve) => {
-                // Clean up any existing scanner
+                // Clean up existing scanner
                 if (html5QrCode) {
                     try {
                         if (isScanning) {
@@ -986,7 +1052,6 @@
                 // Remove all video and canvas elements from reader
                 const readerEl = document.getElementById(readerId);
                 if (readerEl) {
-                    // Remove all video elements
                     const videos = readerEl.querySelectorAll('video');
                     videos.forEach(video => {
                         if (video.srcObject) {
@@ -996,7 +1061,6 @@
                         video.remove();
                     });
                     
-                    // Remove all canvas elements
                     const canvases = readerEl.querySelectorAll('canvas');
                     canvases.forEach(canvas => canvas.remove());
                     
@@ -1004,7 +1068,6 @@
                     const loadingOverlay = readerEl.querySelector('.loading-overlay');
                     const placeholder = readerEl.querySelector('.scanner-ready');
                     
-                    // Clear but preserve important elements
                     Array.from(readerEl.children).forEach(child => {
                         if (!child.classList.contains('loading-overlay') && 
                             !child.classList.contains('scanner-ready')) {
@@ -1012,13 +1075,12 @@
                         }
                     });
                     
-                    // Ensure placeholder is visible
                     if (placeholder) {
                         placeholder.style.display = 'flex';
                     }
                 }
                 
-                // Additional cleanup: stop any remaining media tracks
+                // Stop any remaining media tracks
                 if (navigator.mediaDevices) {
                     navigator.mediaDevices.getUserMedia({ video: true })
                         .then(stream => {
@@ -1027,13 +1089,12 @@
                         .catch(() => {});
                 }
                 
-                // Wait a moment for resources to fully release
                 setTimeout(resolve, 300);
             });
         }
         
         // ==========================================
-        // RESTART CAMERA AFTER SCAN - FIXED
+        // RESTART CAMERA SETELAH SCAN - OTOMATIS TANPA TOMBOL
         // ==========================================
         function restartCameraAfterScan(type, delay = 2000) {
             if (isRestarting) return;
@@ -1046,12 +1107,11 @@
             
             const resultEl = document.getElementById(type === 'pinjam' ? 'scanPinjamResult' : 'scanKembaliResult');
             if (resultEl) {
-                resultEl.innerHTML = '⏳ Mematikan kamera...';
+                resultEl.innerHTML = '⏳ Memproses...';
                 resultEl.style.background = '#fff3cd';
                 resultEl.style.borderColor = '#ffc107';
             }
             
-            // First cleanup
             const readerId = type === 'pinjam' ? 'readerPinjam' : 'readerKembali';
             
             restartTimeout = setTimeout(async () => {
@@ -1059,7 +1119,6 @@
                     // Cleanup camera resources
                     await cleanupCameraResources(readerId);
                     
-                    // Wait a bit longer for resources to release
                     await new Promise(r => setTimeout(r, 500));
                     
                     if (resultEl) {
@@ -1070,6 +1129,14 @@
                     await startScanner(type);
                     isRestarting = false;
                     restartTimeout = null;
+                    
+                    // Update status
+                    const statusEl = document.getElementById(type === 'pinjam' ? 'cameraStatusPinjam' : 'cameraStatusKembali');
+                    if (statusEl) {
+                        statusEl.className = 'camera-status active';
+                        statusEl.textContent = '📷 Kamera aktif - Arahkan ke barcode';
+                    }
+                    
                 } catch (err) {
                     console.error('Restart scanner error:', err);
                     isRestarting = false;
@@ -1120,7 +1187,7 @@
         }
         
         // ==========================================
-        // START / STOP SCANNER - FIXED
+        // START / STOP SCANNER
         // ==========================================
         async function startScanner(type) {
             if (isStarting) return;
@@ -1138,7 +1205,6 @@
             const resultEl = document.getElementById(isPinjam ? 'scanPinjamResult' : 'scanKembaliResult');
             const placeholder = document.getElementById(placeholderId);
             
-            // Hide placeholder
             if (placeholder) placeholder.style.display = 'none';
             
             if (isPinjam && (!peminjamAktif || !peminjamAktif.nama)) {
@@ -1167,7 +1233,6 @@
             debugLog(type, '🔄 Memulai kamera...');
             
             try {
-                // Test camera first
                 if (!cameraTested) {
                     await testCamera(type);
                 }
@@ -1179,7 +1244,6 @@
                     throw new Error('Browser tidak mendukung kamera');
                 }
                 
-                // Create new scanner instance
                 html5QrCode = new Html5Qrcode(readerId);
                 
                 const config = {
@@ -1203,7 +1267,7 @@
                         
                         if (navigator.vibrate) navigator.vibrate(100);
                         
-                        // Stop scanner untuk proses
+                        // STOP SCANNER SETELAH SCAN (otomatis)
                         stopScanner(true);
                         
                         if (isPinjam) {
@@ -1212,7 +1276,7 @@
                             kembalikanBarang(kode);
                         }
                         
-                        // Restart kamera setelah delay
+                        // RESTART KAMERA OTOMATIS SETELAH SCAN (tanpa tombol)
                         setTimeout(() => {
                             restartCameraAfterScan(type, 2000);
                         }, 500);
@@ -1268,7 +1332,6 @@
                 
                 showNotification(`⚠️ ${err.message}`, 'error');
                 
-                // Try alternative camera
                 if (currentFacingMode === 'environment') {
                     currentFacingMode = 'user';
                     setTimeout(() => startScanner(type), 1500);
@@ -1279,7 +1342,6 @@
         }
         
         async function stopScanner(skipUI = false) {
-            // Cleanup resources
             const type = scannerType || 'pinjam';
             const readerId = type === 'pinjam' ? 'readerPinjam' : 'readerKembali';
             await cleanupCameraResources(readerId);
@@ -1295,9 +1357,16 @@
                     el.classList.remove('show');
                 });
                 
-                // Show placeholders
                 document.querySelectorAll('#placeholderPinjam, #placeholderKembali').forEach(el => {
                     el.style.display = 'flex';
+                });
+                
+                // Update status
+                document.querySelectorAll('.camera-status').forEach(el => {
+                    if (!el.textContent.includes('Error')) {
+                        el.textContent = '📷 Status: Siap';
+                        el.className = 'camera-status';
+                    }
                 });
             }
         }
@@ -1314,7 +1383,6 @@
         function switchCamera(type) {
             currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
             debugLog(type, `🔄 Ganti ke: ${currentFacingMode}`);
-            // Cleanup dan restart
             const readerId = type === 'pinjam' ? 'readerPinjam' : 'readerKembali';
             cleanupCameraResources(readerId).then(() => {
                 setTimeout(() => startScanner(type), 500);
@@ -1611,6 +1679,9 @@
                 
                 renderAllTables();
                 updateInfoPeminjam();
+                
+                // Start auto cleanup setiap 5 detik
+                startAutoCleanup();
                 
                 // Auto test camera after load
                 setTimeout(() => {
@@ -2423,7 +2494,6 @@
                     return;
                 }
                 
-                // Cleanup and start
                 const readerId = 'readerPinjam';
                 cleanupCameraResources(readerId).then(() => {
                     setTimeout(() => {
@@ -2443,28 +2513,6 @@
                     }, 500);
                 });
                 showNotification('📷 Membuka kamera...', 'info');
-            });
-            
-            // ==== RESTART CAMERA ====
-            document.getElementById('restartCameraPinjam').addEventListener('click', function() {
-                const readerId = 'readerPinjam';
-                cleanupCameraResources(readerId).then(() => {
-                    setTimeout(() => {
-                        startScanner('pinjam');
-                    }, 500);
-                });
-                showNotification('🔄 Merestart kamera...', 'info');
-            });
-            
-            document.getElementById('restartCameraKembali').addEventListener('click', function() {
-                if (!requireAdmin('restart kamera')) return;
-                const readerId = 'readerKembali';
-                cleanupCameraResources(readerId).then(() => {
-                    setTimeout(() => {
-                        startScanner('kembali');
-                    }, 500);
-                });
-                showNotification('🔄 Merestart kamera...', 'info');
             });
             
             // ==== TEST CAMERA ====
@@ -2745,10 +2793,12 @@
             console.log('✅ Sistem siap!');
             console.log('📱 Terhubung ke Firebase:', firebaseConfig.projectId);
             console.log('📷 Klik tombol "SCAN BARCODE" untuk memulai kamera');
+            console.log('🔄 Auto cleanup cache kamera setiap 5 detik');
         });
         
         window.addEventListener('beforeunload', () => {
             stopScanner(false);
+            stopAutoCleanup();
         });
     </script>
 </body>
